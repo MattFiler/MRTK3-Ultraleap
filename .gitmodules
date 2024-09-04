@@ -1,0 +1,3 @@
+[submodule "UL-UnityPlugin"]
+	path = UL-UnityPlugin
+	url = https://github.com/ultraleap/UnityPlugin
