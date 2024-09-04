@@ -2,11 +2,26 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [3.2.2-development] - 2024-08-29
+## Unreleased
+
+## [4.0.0-development.pre.1] - 2024-07-09
 
 ### Changed
 
-* Package patch version update to allow UPM publishing
+* Updated package com.unity.xr.interaction.toolkit to 3.0.3
+
+### Removed
+
+* Removed LegacyDialog/Dialog files.
+* Removed LegacyDialog/DialogButton files.
+* Removed LegacyDialog/DialogButtonContext files.
+* Removed LegacyDialog/DialogButtonHelpers files.
+* Removed LegacyDialog/DialogButtonTypes files.
+* Removed LegacyDialog/DialogProperty files.
+* Removed LegacyDialog/DialogShell files.
+* Removed LegacyDialog/DialogState files.
+* Removed LegacyDialog/README files.
+* Removed obsolete Slider.SliderValue fields.
 
 ## [3.2.1] - 2024-04-23
 

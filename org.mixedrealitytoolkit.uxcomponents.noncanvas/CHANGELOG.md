@@ -2,11 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [3.1.4-development] - 2024-08-29
+## Unreleased
+
+## [4.0.0-development.pre.1] - 2024-07-09
 
 ### Changed
 
-* Package patch version update to allow UPM publishing
+* Updated package com.unity.xr.interaction.toolkit to 3.0.4
 
 ## [3.1.3] - 2024-04-17
 

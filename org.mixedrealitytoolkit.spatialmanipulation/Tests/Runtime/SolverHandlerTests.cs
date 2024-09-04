@@ -4,17 +4,13 @@
 // Disable "missing XML comment" warning for tests. While nice to have, this documentation is not required.
 #pragma warning disable CS1591
 
-using MixedReality.Toolkit;
 using MixedReality.Toolkit.Core.Tests;
 using MixedReality.Toolkit.Input.Tests;
-using MixedReality.Toolkit.Input.Simulation;
 using MixedReality.Toolkit.Input;
 using NUnit.Framework;
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.TestTools;
-using HandshapeId = MixedReality.Toolkit.Input.HandshapeTypes.HandshapeId;
 using UnityEngine.XR;
 
 namespace MixedReality.Toolkit.SpatialManipulation.Runtime.Tests
@@ -25,9 +21,16 @@ namespace MixedReality.Toolkit.SpatialManipulation.Runtime.Tests
     public class SolverHandlerTests : BaseRuntimeInputTests
     {
         /// <summary>
+        /// Override of the rig version to use for these tests. These tests validate that the old rig remain functional.
+        /// The <see cref="SolverHandlerTestsForControllerlessRig"/> will validate the new rig.
+        /// </summary>
+        protected override InputTestUtilities.RigVersion RigVersion => InputTestUtilities.RigVersion.Version1;
+
+        /// <summary>
         /// This checks if the SolverHandler correctly switches to the active hand when tracking
         /// two interactors
         /// </summary>
+#pragma warning disable CS0618 // Adding this pragma because all the encompassed tests depend on deprecated ControllerLookup
         [UnityTest]
         public IEnumerator SolverHandlerInteractorSwitchesToActiveHand()
         {
@@ -373,6 +376,7 @@ namespace MixedReality.Toolkit.SpatialManipulation.Runtime.Tests
             // Check that the SolverHandler keeps tracking the right hand
             Assert.IsTrue(solverHandler.TransformTarget.position == solverHandler.RightInteractor.transform.position, $"Solver Handler did not follow hand");
         }
+#pragma warning restore CS0618 // Adding this pragma because all the encompassed tests depend on deprecated ControllerLookup
 
         /// <summary>
         /// This checks if the SolverHandler moves with head when tracking the head

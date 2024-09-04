@@ -2,6 +2,29 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [4.0.0-development.pre.1] - 2024-07-09
+
+### Added
+
+* Added ITrackedInteractor to represent interactor with parent pose backed by a tracked input device.
+
+### Changed
+
+* Updated package com.unity.xr.interaction.toolkit to 3.0.4
+* Updated InteractorHandednessExtensions.
+
+### Removed
+
+* Removed obsolete HandednessExtensions::IsRight method.
+* Removed obsolete HandednessExtensions::IsLeft method.
+* Removed obsolete HandsUtils::GetSubsystem method.
+* Removed obsolete PlayspaceUtilities.ReferenceTransform field.
+* Removed obsolete XRSubsystemHelpers::GetAllRunningSubsystemsNonAlloc method.
+
+### Deprecated
+
+* ControllerLookup marked as Obsolete.
+
 ## [3.3.0-development] - 2024-06-24
 
 ### Fixed

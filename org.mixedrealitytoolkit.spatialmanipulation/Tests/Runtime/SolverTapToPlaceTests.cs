@@ -20,9 +20,16 @@ namespace MixedReality.Toolkit.SpatialManipulation.Runtime.Tests
     public class SolverTapToPlaceTests : BaseRuntimeInputTests
     {
         /// <summary>
+        /// Override of the rig version to use for these tests. These tests validate that the old rig remain functional.
+        /// The <see cref="SolverTapToPlaceTestsForControllerlessRig"/> will validate the new rig.
+        /// </summary>
+        protected override InputTestUtilities.RigVersion RigVersion => InputTestUtilities.RigVersion.Version1;
+
+        /// <summary>
         /// Verify TapToPlace can move an object to the end of the right hand ray.
         /// </summary>
         [UnityTest]
+#pragma warning disable CS0618 // Adding this pragma because all the encompassed tests depend on deprecated ControllerLookup
         public IEnumerator TapToPlaceFollowsRightHandRay()
         {
             // Disable gaze interactions for this unit test;

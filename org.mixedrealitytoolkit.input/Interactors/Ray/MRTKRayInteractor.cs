@@ -3,22 +3,24 @@
 
 using System;
 using System.Collections.Generic;
-using MixedReality.Toolkit.Subsystems;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.InputSystem.XR;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
 namespace MixedReality.Toolkit.Input
 {
     /// <summary>
-    /// A wrapper for the XRRayInteractor which stores extra information for MRTK management/services
+    /// A wrapper for the <see cref="XRRayInteractor"/> which stores extra information for MRTK management/services
     /// </summary>
     [AddComponentMenu("MRTK/Input/MRTK Ray Interactor")]
     // This execution order ensures that the MRTKRayInteractor runs its update function right after the
-    // XRController. We do this because the MRTKRayInteractor needs to set its own pose after the parent controller transform,
+    // <see cref="XRController"/>. We do this because the <see cref="MRTKRayInteractor"/> needs to set its own pose after the parent controller transform,
     // but before any physics raycast calls are made to determine selection. The earliest a physics call can be made is within
-    // the UIInputModule, which has an update order much higher than XRControllers.
+    // the UIInputModule, which has an update order much higher than <see cref="XRController"/>s.
     // TODO: Examine the update order of other interactors in the future with respect to when their physics calls happen,
     // or create a system to keep ensure interactor poses aren't ever implicitly set via parenting.
     [DefaultExecutionOrder(XRInteractionUpdateOrder.k_Controllers + 1)]
@@ -26,9 +28,36 @@ namespace MixedReality.Toolkit.Input
         XRRayInteractor,
         IRayInteractor,
         IHandedInteractor,
-        IVariableSelectInteractor
+        IVariableSelectInteractor,
+        IModeManagedInteractor,
+        ITrackedInteractor
     {
         #region MRTKRayInteractor
+
+        [SerializeField, Tooltip("Holds a reference to the <see cref=\"TrackedPoseDriver\"/> associated to this interactor if it exists.")]
+        private TrackedPoseDriver trackedPoseDriver = null;
+
+        /// <summary>
+        /// Holds a reference to the <see cref="TrackedPoseDriver"/> associated to this interactor if it exists.
+        /// </summary>
+        protected internal TrackedPoseDriver TrackedPoseDriver => trackedPoseDriver;
+
+        [SerializeField]
+        [Tooltip("The root management GameObject that interactor belongs to.")]
+        private GameObject modeManagedRoot = null;
+
+        /// <summary>
+        /// Returns the GameObject that this interactor belongs to. This GameObject is governed by the
+        /// interaction mode manager and is assigned an interaction mode. This GameObject represents the group that this interactor belongs to.
+        /// </summary>
+        /// <remarks>
+        /// This will default to the GameObject that this attached to a parent <see cref="TrackedPoseDriver"/>.
+        /// </remarks>
+        public GameObject ModeManagedRoot
+        {
+            get => modeManagedRoot;
+            set => modeManagedRoot = value;
+        }
 
         /// <summary>
         /// Is this ray currently hovering a UnityUI/Canvas element?
@@ -38,19 +67,56 @@ namespace MixedReality.Toolkit.Input
         /// <summary>
         /// Is this ray currently selecting a UnityUI/Canvas element?
         /// </summary>
-        public bool HasUISelection => HasUIHover && isUISelectActive;
+        public bool HasUISelection
+        {
+            get
+            {
+                bool hasUISelection = HasUIHover;
+#pragma warning disable CS0618 // isUISelectActive is obsolete
+                if (forceDeprecatedInput)
+                {
+                    hasUISelection &= isUISelectActive;
+                }
+#pragma warning restore CS0618 // isUISelectActiver is obsolete
+                else if (uiPressInput != null)
+                {
+                    hasUISelection &= uiPressInput.ReadIsPerformed();
+                }
+                else
+                {
+                    hasUISelection = false;
+                }
+                return hasUISelection;
+            }
+        }
 
         /// <summary>
         /// Used to check if the parent controller is tracked or not
         /// Hopefully this becomes part of the base Unity XRI API.
         /// </summary>
-        private bool IsTracked => xrController.currentControllerState.inputTrackingState.HasPositionAndRotation();
+        private bool IsTracked
+        {
+            get
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (forceDeprecatedInput) //If no XRController is associated with this interactor then try to get the TrackedPoseDriver component instead
+                {
+                    //If the XRController has already been set then use it to check if the controller is tracked
+                    return xrController.currentControllerState.inputTrackingState.HasPositionAndRotation();
+                }
+#pragma warning restore CS0618
+                else
+                {
+                    if (TrackedPoseDriver == null) //If the interactor does not have a TrackedPoseDriver component then it is not tracked
+                    {
+                        return false;
+                    }
 
-        /// <summary>
-        /// Cached reference to hands aggregator for efficient per-frame use.
-        /// </summary>
-        [Obsolete("Deprecated, please use XRSubsystemHelpers.HandsAggregator instead.")]
-        protected HandsAggregatorSubsystem HandsAggregator => XRSubsystemHelpers.HandsAggregator as HandsAggregatorSubsystem;
+                    // If this interactor has a TrackedPoseDriver then use it to check if this interactor is tracked
+                    return TrackedPoseDriver.GetInputTrackingState().HasPositionAndRotation();
+                }
+            }
+        }
 
         /// <summary>
         /// How unselected the interactor must be to initiate a new hover or selection on a new target.
@@ -75,16 +141,59 @@ namespace MixedReality.Toolkit.Input
 
         #endregion MRTKRayInteractor
 
+        #region ITrackedInteractor
+        /// <inheritdoc />
+        public GameObject TrackedParent => trackedPoseDriver == null ? null : trackedPoseDriver.gameObject;
+        #endregion ITrackedInteractor
+
         #region IHandedInteractor
 
-        Handedness IHandedInteractor.Handedness => (xrController is ArticulatedHandController handController) ? handController.HandNode.ToHandedness() : Handedness.None;
+        /// <inheritdoc />
+        Handedness IHandedInteractor.Handedness
+        {
+            get
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0612 // Type or member is obsolete
+                if (forceDeprecatedInput)
+                {
+                    return (xrController is ArticulatedHandController handController) ? handController.HandNode.ToHandedness() : Handedness.None;
+                }
+#pragma warning restore CS0612
+#pragma warning restore CS0618
+                else
+                {
+                    return handedness.ToHandedness();
+                }
+            }
+        }
 
         #endregion IHandedInteractor
 
         #region IVariableSelectInteractor
 
         /// <inheritdoc />
-        public float SelectProgress => xrController.selectInteractionState.value;
+        public float SelectProgress
+        {
+            get
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+                if (forceDeprecatedInput)
+                {
+                    return xrController.selectInteractionState.value;
+                }
+#pragma warning restore CS0618
+                else if (selectInput != null)
+                {
+                    return selectInput.ReadValue();
+                }
+                else
+                {
+                    Debug.LogWarning($"Unable to determine SelectProgress of {name} because there is no Select Input Configuration set for this interactor.");
+                }
+                return 0;
+            }
+        }
 
         #endregion IVariableSelectInteractor
 
@@ -155,13 +264,23 @@ namespace MixedReality.Toolkit.Input
                     bool hoverActive = base.isHoverActive;
                     if (hoverActive)
                     {
-                        if (xrController is ArticulatedHandController handController)
+                        bool isPalmFacingAway = false;
+
+#pragma warning disable CS0618 // Type or member is obsolete
+#pragma warning disable CS0612 // Type or member is obsolete
+                        if (forceDeprecatedInput &&
+                            xrController is ArticulatedHandController handController &&
+                            (XRSubsystemHelpers.HandsAggregator?.TryGetPalmFacingAway(handController.HandNode, out isPalmFacingAway) ?? true))
                         {
-                            bool isPalmFacingAway = false;
-                            if (XRSubsystemHelpers.HandsAggregator?.TryGetPalmFacingAway(handController.HandNode, out isPalmFacingAway) ?? true)
-                            {
                                 hoverActive &= isPalmFacingAway;
-                            }
+                        }
+#pragma warning restore CS0612
+#pragma warning restore CS0618
+                        // Attempt palm facing away check if the interactor is associated with a hand.
+                        else if (handedness != InteractorHandedness.None &&
+                            (XRSubsystemHelpers.HandsAggregator?.TryGetPalmFacingAway(handedness.ToXRNode(), out isPalmFacingAway) ?? true))
+                        {
+                            hoverActive &= isPalmFacingAway;
                         }
                     }
 
@@ -228,10 +347,47 @@ namespace MixedReality.Toolkit.Input
 
         #endregion XRBaseInteractor
 
+        #region IModeManagedInteractor
+        /// <inheritdoc/>
+        [Obsolete("This function is obsolete and will be removed in the next major release. Use ModeManagedRoot instead.")]
+        public GameObject GetModeManagedController()
+        {
+            // Legacy controller-based interactors should return null, so the legacy controller-based logic in the
+            // interaction mode manager is used instead.
+#pragma warning disable CS0618 // Type or member is obsolete 
+            if (forceDeprecatedInput)
+            {
+                return null;
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            return ModeManagedRoot;
+        }
+        #endregion IModeManagedInteractor
+
+        #region Unity Event Functions
+        /// <inheritdoc/>
+        protected override void Start()
+        {
+            base.Start();
+
+            // Try to get the TrackedPoseDriver component from the parent if it hasn't been set yet
+            if (trackedPoseDriver == null) 
+            {
+                trackedPoseDriver = GetComponentInParent<TrackedPoseDriver>();
+            }
+
+            // If mode managed root is not defined, default to the tracked pose driver's game object
+            if (modeManagedRoot == null && trackedPoseDriver != null)
+            {
+                modeManagedRoot = trackedPoseDriver.gameObject;
+            }
+        }
+
         /// <summary>
         /// A Unity event function that is called every frame, if this object is enabled.
         /// </summary>
-        private void Update()
+        protected virtual void Update()
         {
             // Use Pose Sources to calculate the interactor's pose and the attach transform's position
             // We have to make sure the ray interactor is oriented appropriately before calling
@@ -252,6 +408,13 @@ namespace MixedReality.Toolkit.Input
             {
                 attachTransform.rotation = devicePose.rotation;
             }
+
+            // If mode managed root is not defined, default to the tracked pose driver's game object
+            if (modeManagedRoot == null && trackedPoseDriver != null)
+            {
+                modeManagedRoot = trackedPoseDriver.gameObject;
+            }
         }
+        #endregion Unity Event Functions
     }
 }
